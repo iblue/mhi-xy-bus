@@ -1,0 +1,383 @@
+- Es liegt eine Spannung von ca. 16V an der Leitung an.
+- Auch wenn die Anlage aus ist, sind Signale auf der Leitung.
+- Signale bestehen aus:
+  Datenpaketen mit jeweils:
+    - Pull low (50 us)
+    - Pull high (50 us)
+    - Mit variablen Pausen (max ~1ms) dazwischen
+    - Es kann auch ein L auf ein H direkt (~wenige us) folgen.
+- Dazwischen ist Ruhe, manchmal bis ~10 sec
+- Abtastrate 1.562 MHz reicht locker.
+
+- Wenn sonst nichts passiert, findet folgende Konversation statt (Fernbedienung eingeschaltet, 26 Grad, Lüftung an):
+
+-|-.------|-------|-.-------|------
+ A B      C       A B       C
+
+0 ms: Paket A
+300 ms: Paket B
+4800 ms: Paket C
+
+Das ganz wiederholt sich alle 9600 ms
+
+Paket A: Dauer 60 ms
+Paket B: Dauer 54 ms
+Paket C: Dauer 60 ms
+
+Die elektrischen Charachteristiken unterscheiden sich bei den Paketen. Sie sind bei A und C gleich. Die Amplitude der Oberschwingung ist bei A und C größer.
+Hypothese: A ist, was die Klima sendet. B ist die Antwort. C ist, was die Klima erneut sendet, aber worauf sie keine Antwort erhält.
+Weitere Hypothese: A ist eine Anfrage zum enumerieren der Fernbedienungen auf dem Bus, und zwar an Nr. 1. B ist die Antwort der Fernbedienung. C ist eine Frage, ob es weitere Fernbedienungen gibt.
+
+Zum Prüfen der Hypothese:
+ - Fernbedienung abschalten?
+ - Fernbedienung drücken und Signale aufzeichnen und charateristik untersuchen
+ - Fernbedienung abklemmen?
+
+# Versuch 2. Fernbedienung aus.
+- Signal sieht gleich aus.
+
+# Versuch 3. Einschalten der Fernbedienung während der Aufzeichnung.
+- Das Signal C (größere Amplitude) ist etwas vorgezogen.
+
+# Versuch 4: Mehrfaches aus- und einschalten der Fernbedienung.
+-> Mehr Signale mit hoher Amplitude.
+
+Neue Hypothese! Das Signal mit der hohen Amplitude kommt von der Fernbedienung.
+
+# Versuch 5:
+- Einschalten und ausschalten (jeweils 2x) und vergleichen der Signale
+Sec 5: Ein
+Sec 10: Aus
+Sec 20: Ein
+Sec 25: Aus
+
+
+- Es sind auch diverse Signale ohne Antwort zu sehen. Deren Bedeutung wird vorerst nicht untersucht.
+
+## Sec 5: Einschalten:
+
+52us Low
+52us Pause
+52us High
+1.1 ms Pause
+
+52us L
+52us Pause
+52us H
+1.1 ms Pause
+
+52us L
+52us Pause
+52us H
+1.1 ms Pause
+
+52us L
+780us Pause
+
+52us H
+360 us Pause
+
+52us L
+52us Pause
+52us H
+1.1 ms Pause
+
+52us L
+52us Pause
+52us H
+1.1 ms Pause
+
+52us L
+360us Pause
+
+52us H
+780us Pause
+
+52us L
+570us Pause
+
+52us H
+570us Pause
+
+52us L
+260us Pause
+
+52us H
+880us Pause
+
+52us H
+260us Pause
+
+... Hypothese: Vielleicht ist das Signal ja in den Timing-Informationen ZWISCHEN den Flanken.
+Hypothese: Es kommt immer ein Low und ein High als Paar. Die Abstände zwischen den Lows sind gleich.
+
+1. Abstand LL: 1247us
+2. Abstand LL: 1247us
+3. Abstand LL: 1247us
+4. Abstand LL: 1247us
+5. Abstand LL: 1247us
+6. Abstand LL: 1247us
+7. Abstand LL: 1248us
+8. Abstand LL: 1247us
+... usw
+Tatsächlich bei allen weiteren genauso.
+=> 800 Symbols/sec
+
+Soo..
+
+Also neue Auswertung. 1 Bit = Jeweils Abstand L zu folgendem H:
+
+1:  52us
+2:  52us
+3:  52us
+4:  780us
+5:  52us
+6:  52us
+7:  360us
+8:  571us
+9:  260us
+10: 260us
+11: 360us
+12: 260us
+13: 467us
+14: 675us
+15: 260us
+16: 780us
+17: 780us
+18: 363us
+19: 52us
+20: 52us
+...(gleich)
+25: 52us
+26: 260us
+27: 260us
+28: 52us
+..(alle gleich)
+33: 52us
+34: 780us
+35: 780us
+36: 360us
+37: 780us
+38: 780us
+39: 360us
+40: 780us
+41: 780us
+42: 360us
+43: 780us
+44: 780us
+45: 360us
+46: 360us
+47: 156us
+48: 260us
+
+Es tauchen also folgende Werte auf:
+52us -> Diff ca. 100
+156us -> Diff ca. 100
+260us -> Diff ca. 100
+360us -> Diff ca. 100
+467us -> Diff ca. 100
+571us -> Diff ca. 100
+675us -> Diff ca. 100
+780us -> Diff ca. 100
+
+AHA!
+Es können also in einem Timeslot 8 verschiedene Werte enkodiert werden (entspricht 3 Bit)
+=> 2400 bits/sec
+
+Muss aber auch auf andere Encoding gefasst sein. Könnte auch sonstwas sein.
+
+13:00 Mittagspause.
+# Plan für Decoder-Script
+Nächste Schritte:
+- Script bauen, das aus Export aus dem Logic Analyzer Bytes rauswirft.
+
+- Low Level erkennen
+- High Level erkennen
+- Base Level erkennen
+
+=>
+Low Edge erkennen
+High Edge erkennen
+
+=> Zeit twischen L und H messen
+=> Bit 000 bis 111
+
+=> Als Hex rauswerfen.
+
+Wenn zwischen letzten H und nächsten L viel Zeit => Neues Paket
+
+### Tag 2: 07.08.2018
+
+Heute steht an, herauszufinden, wie das Binaerformat ist. Dazu neuer Versuch.
+Längere Aufzeichnung. Um Daten zu sparen neue Samplerate: 781.25 kS/s sollte reichen.
+
+Versuch 1: 120 Sekunden aufzeichen für Statuspakete. Anlage aus.
+
+Auffaellig: Folgende Folge:
+ - Paket (RC) - 5 Sek Pause
+ - Paket (RC) - 300 ms Pause
+ - Paket (AC) (Antwort?) - 5 Sek Pause
+
+Dekodiert:
+
+0 symbol(s)
+PACKET
+@0.984876
+6 0 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 5 1 3
+48 symbol(s)
+PACKET
+@5.794372
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@6.098973
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@10.584686
+7 0 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 6 1 3
+48 symbol(s)
+PACKET
+@15.363476
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@15.668031
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@20.189505
+0 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 7 1 3
+48 symbol(s)
+PACKET
+@24.968270
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@25.272986
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@29.756983
+1 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 0 2 3
+48 symbol(s)
+PACKET
+@34.569116
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@34.873962
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@39.361245
+2 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 1 2 3
+48 symbol(s)
+PACKET
+@44.173938
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@44.478912
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@48.964454
+3 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 2 2 3
+48 symbol(s)
+PACKET
+@53.774355
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@54.078880
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@58.565658
+4 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 3 2 3
+48 symbol(s)
+PACKET
+@63.346007
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@63.650920
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@68.135869
+5 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 4 2 3
+48 symbol(s)
+PACKET
+@72.947949
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@73.252882
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@77.736845
+6 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 5 2 3
+48 symbol(s)
+PACKET
+@82.550691
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@82.855852
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@87.341032
+7 1 0 7 2 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 6 2 3
+48 symbol(s)
+PACKET
+@92.153997
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@92.458801
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@96.944620
+0 0 0 7 4 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 7 2 3
+48 symbol(s)
+PACKET
+@101.723256
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@102.027853
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@106.513499
+1 0 0 7 4 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 0 3 3
+48 symbol(s)
+PACKET
+@111.325416
+0 0 0 7 0 0 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 5 1 2
+48 symbol(s)
+PACKET
+@111.629800
+0 0 2 1 0 0 2 5 2 2 3 2 7 6 2 4 4 2 0 0 0 0 0 0 0 1 3 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 3 4 3
+48 symbol(s)
+PACKET
+@116.115744
+2 0 0 7 4 1 2 5 2 2 3 2 7 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 1 3 3
+48 symbol(s)
+
+Versuch 1a: Nochmal, aber 600 Sekunden. Da sind irgendwelche counter drin die irgendwas tun.
+
+Versuch 2: 120 Sekunden aufzeichen fuer Befehlspakete.
+
+1. An, Aus, An, Aus, An, Aus
+2. An, Temp runter bis min, Aus
+3. An, Temp rauf bis max, Aus
+4. An, Temp runter bis min, Aus
+
+# Slave remote:
+Reversed polarity

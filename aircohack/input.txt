@@ -1,0 +1,25 @@
+Ziel: Die Daten sollen live eingelesen werden können. Immer alles durch den
+Logic Analyzer zu jagen und dann zu parsen liefert nicht genug Daten.
+
+Idee:
+- Analogteil verwandelt Eingangsspannungen in 2 Signale.
+  - Ausgang L: Wenn Spannung < V_Low: +5V, sonst 0V
+  - Ausgang H: Wenn Spannung > V_Hi : +5V, sonst 0V
+
+Spannungen:
+- Im Leerlauf liegen 16.95 V an.
+- Am Spannungsteiler liegen im Leerlauf 3.87 V an.
+- Am Spannungsteiler liegen bei high: 4.98V - 4.68V an (= 21.81 - 20.49)
+- Am Spannungsteiler liegen bei low : 2.45V - 3.02V an (= 10.73 - 13.22)
+
+
+Sei die Eingangsspannung also V_0, dann ist V_H = 28-20% drüber, V_L = 36-22% drunter.
+
+Also sagen wir, wenn die Eingangsspannung 15% über / unter dem Durchschnitt
+liegt: Durchschalten. Sollte reichen.
+
+- Zig Designs. Neue Idee:
+
+1. Spannungsteiler an Eingang (mit bisschen glättung per Kondensator)
+2. Spannungsteiler an 5V Quelle (4.5 V, 3.3V als Referenzpunkt).
+3. LM393 => direkt TTL Pegel. Wenn über 4.5 V => Nr 1 an. Wenn unter 3.3V => Nr 2 an.

@@ -1,0 +1,32 @@
+reader.log: Turned off, ran over night. Nothing pressed on remote.
+reader2.log: Turned on, temperature all down, all up, fan all down, fan all up, turned off. 12 secs between each keypress (except temp 28-30, because annoyed)
+reader3.log: Turned on, multiple mode cycle, then turned to cooling, 23.5 c
+reader4.log: Cycling through all modes, 12 sec between, starting with cooling.
+reader5.log: Pressing Aircon no. => No data on the bus except usual.
+reader6.log: Unit turned on, cooling, some hours, enabled data readout mode on RC (turn off, press check, wait for Data to load, press arrows under lid)
+reader7.log: Unit on, normal operation, unit off.
+reader8.log: Pressing louver and venti buttons: No effect. Pressing some more buttons.
+reader9.log: Power failure simulation. Switching unit off.
+reader10.log: Some time after power fail, unit still off, switching unit on, to 26 degrees, cooling, fan full and off again. Some settings on RC.
+reader13.log: Another over nighter
+reader14.log: While turned off, pressed test for 3 sec, started test run of drain pump, waited 10 sec, stopped.
+reader15.log: Turning on and cycling through fan settings.
+reader16.log: Just logging some stuff.
+reader17.log: Connecting slave remote.
+reader18.log: Connecting slave remote.
+reader20.log: Changed high level. Connecting slave remote again. Switched to S/A
+  15:33:10: Presses off on slave.
+  15:33:38: Pressed on
+  15:33:56: off
+  => No effect.
+  Disconnected.
+reader21.log: Connecting slave remote again. Switched to S/B.
+  :47 connected
+  :56 wait sate, showing d6
+  :57 on
+  :16 off
+  :33 on
+  => No effect.
+  Disconnected A/C from power and restarted.
+reader...log: Fails because of reversed polarity
+reader28.log: Reader with new firmware for polarity detection

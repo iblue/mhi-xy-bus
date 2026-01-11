@@ -1,0 +1,4 @@
+*.logicdata
+*.csv
+.byebug_history
+*.log

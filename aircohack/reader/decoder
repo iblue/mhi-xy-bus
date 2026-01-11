@@ -1,0 +1,147 @@
+#!/usr/bin/env ruby
+require "byebug"
+unless ARGV[0]
+  puts "Usage: decoder <file>"
+  exit 1
+end
+
+def decode(x)
+  "%02x" % x.reverse.chars.map{|i| i.to_i}.inject(0){|a,b| a*8+(b-1)}
+end
+
+def temp(byte)
+   (byte-0x80)/2.0
+end
+
+def interprete_request(decoded_line)
+  byte = decoded_line.split(" ").map{|x| x.to_i(16)}
+
+  # 00: Unit number A (always 00)
+  # 01: Unit number B (always 07)
+  # 02: Current mode
+  active = (byte[2] & 0x01 == 1) ? "on " : "off"
+  mode = case (byte[2] & 0x7e)
+         when 0x2a
+           "cooling"
+         when 0x2e
+           "fan only"
+         when 0x72
+           "heating"
+         when 0x22
+           "auto"
+         when 0x26
+           "dehumidify"
+         else
+           "UNKNOWN"
+         end
+  fanspeed = case byte[3]
+             when 0x98
+               "level 1"
+             when 0x99
+               "level 2"
+             when 0x9a
+               "level 3"
+             when 0xaa
+               "off"
+             end
+  targettemp = temp(byte[4])
+  parity      = (byte[0..-2].sum%256 == byte[-1]) ? "OK" : "FAIL"
+
+  return <<"  EOF"
+  INTERPRETATION:
+    Unit:        #{active}
+    Mode:        #{mode}
+    Fan:         #{fanspeed}
+    Target temp: #{targettemp} °C
+    Datablock:   UNKNOWN
+    Parity:      #{parity}
+  EOF
+end
+
+def interprete_answer(decoded_line)
+  byte = decoded_line.split(" ").map{|x| x.to_i(16)}
+
+  # 00: Unit number A (always 00)
+  # 01: Unit number B (always 07)
+  # 02: Current mode
+  active = (byte[2] & 0x01 == 1) ? "on " : "off"
+  mode = case (byte[2] & 0x7e)
+         when 0x2a
+           "cooling"
+         when 0x2e
+           "fan only"
+         when 0x72
+           "heating"
+         when 0x22
+           "auto"
+         when 0x26
+           "dehumidify"
+         else
+           "UNKNOWN"
+         end
+  fanspeed = case byte[3]
+             when 0x98
+               "level 1"
+             when 0x99
+               "level 2"
+             when 0x9a
+               "level 3"
+             when 0xaa
+               "off"
+             end
+  targettemp = temp(byte[4])
+  currenttemp = temp(byte[5])
+  parity      = (byte[0..-2].sum%256 == byte[-1]) ? "OK" : "FAIL"
+
+  return <<"  EOF"
+  INTERPRETATION:
+    Unit:        #{active}
+    Mode:        #{mode}
+    Fan:         #{fanspeed}
+    Target temp: #{targettemp} °C
+    Curr   temp: #{currenttemp} °C
+    Datablock:   UNKNOWN
+    Parity:      #{parity}
+  EOF
+end
+
+def interprete_time(time)
+  Time.at(time.split(".")[0].to_i).strftime("%Y-%d-%m %H:%M:%S.")+time.split(".")[1][0..2]
+end
+
+begin
+  time = nil
+    ARGF.each_line do |line|
+      if line.include? "." # Timing
+        time = line.strip
+        next
+      end
+      if line.include? "E"
+        puts "Error: #{line}"
+        next
+      end
+      line = line.strip
+      line, polarity = line[0..-2], line[-1]
+      line = line.chars.each_slice(3).map{|x| decode(x.join)}.join(" ")
+      calc_parity = line.split(" ").map{|x| x.to_i(16)}[0..-2].sum%256
+      rec_parity  = line.split(" ").map{|x| x.to_i(16)}[-1]
+      if calc_parity != rec_parity
+        puts "PARITY FAIL: #{line}"
+      else
+        if line.match(/^80 01/)
+          direction = "ANSW"
+        elsif line.match(/^00 07/)
+          direction = "RQST"
+        else
+          direction = "SCAN"
+        end
+        puts "#{interprete_time(time)}: #{direction}(#{polarity}) #{line}"
+        if direction == "RQST"
+          puts interprete_request(line)
+        end
+        if direction == "ANSW"
+          puts interprete_answer(line)
+        end
+      end
+  end
+end

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+stty -F /dev/ttyUSB0 9600 cs8 -cstopb -parenb -cooked min 1 time 1 -crtscts -hupcl
+
+while true; do
+  read LINE < /dev/ttyUSB0
+  date +%s.%N
+  echo $LINE
+done

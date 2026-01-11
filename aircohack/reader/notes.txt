@@ -1,0 +1,65 @@
+Hypothesis:
+- 3 Symbols are one Byte.
+111 .. 884 = ({1..8}, {1..8}, {1..4})
+Parity:
+- Byte 16 = Sum(Byte 1 ... Byte 15)
+
+# Byte 1: Master Address of target (00..0f) (80 = answer)
+# Byte 2: Slave unit address (07 .. 77) of target (01 = answer)
+# Byte 3: On/off, mode
+  - a2: Auto, aus
+  - aa: aus                1 010 101 0
+  - ab: an, kuehlen        1 010 101 1
+  - af: an, lueften        1 010 111 1
+  - f3: an, heizen         1 111 001 1
+  - a3: an, auto           1 010 001 1
+  - a7: an, entfeuchten    1 010 011 1
+# Byte 4: Fan
+  - 98: Level 1              10011000
+  - 99: Level 2              10011001
+  - 9a: Level 3              10011010
+  - aa: heizen (fan war aus) 10101010
+# Byte 5: Target temperature (X-0x80)/2.0 = Temp in °C
+  - a4: 18.0 (Scale incorrect?)
+  - a5: 18.5
+  - a6: 19.0
+  - a7: 19.5
+  - a8: 20.0
+  - a9: 20.5
+  - aa: 21.0
+  - ab: 21.5
+  - ac: 22.0
+  - ad: 22.5
+  - ae: 23.0 (DEFAULT)
+# Byte 6: Outside temperature, temp at unit, compressor temp?
+  - 0xff for RC
+  - other values for AC
+
+# Byte 7-15: 9 bytes of additional data block???
+- Currently unknown. Used for maintenance.
+- RC just sends 00 00 80 00 00 ff ff ff ff if there is nothing to do (after power loss)
+-               00 00 90 00 00 ff ff ff ff otherwise
+- AC answers with 00 00 88 00 ff ff ff ff ff (power loss)
+-                 00 00 c8 00 ff ff ff ff ff otherwise
+
+# Byte 9:
+- After power loss
+  - From RC: 0x80
+  - From AC: 0x88
+- After system turned on, ca. 10-20 seconds afterwards
+  - From RC: 0x90
+  - From AC: 0xc8
+- After system turned off again, after some time:
+  - From RC: 0x90
+  - From AC: 0x48
+
+AC can also send 0x08, then whole block becomes:
+  08 00 ff 35 10 0a 01
+AC can also send 0x48, then:
+  48 00 ff 80 10 b5 ff
+  48 00 ff 80 10 b6 ff
+
+# Byte 16: Checksum (Sum of all bytes)
+
+
+

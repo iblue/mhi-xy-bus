@@ -1,0 +1,13 @@
+If AC sends byte 7 = 0x48, the temperature value of something has changed and
+in byte 14, this temperature is sent.
+- It is stable when the unit is turned on, with values around 0xc5 - 0xc9 (34.5 °C - 36.5 °C)
+- When the unit is turned of, it increases up to 0xcb (37.5 °C), then sharply dropping
+- The lowest value is 0x9d (14.5 °C)
+- It increases in the early morning to max 36.5 °C, then drops again.
+
+In the same packet (byte 7 = 0x48), byte 10 is ist to 0x02, then a few minutes
+after the unit turned of, the value goes to 0x00 and the temperature (see
+above) starts to drop.
+
+It may be some thermistor from the outside unit, because in the morning in
+increases, if the sun is shining on the outside unit.

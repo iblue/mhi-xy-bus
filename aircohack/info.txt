@@ -1,0 +1,3 @@
+Zweiadriges Kabel. Die Anschlüsse werden mit X und Y bezeichnet.
+Gemessene Spannung am Kabel: 16,9 V Gleichstrom
+Laut Handbuch ist die Polarität für die Fernbedienung egal

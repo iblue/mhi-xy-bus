@@ -1,0 +1,47 @@
+# Timings
+## Bus
+- 1 clock cycle (=3 Bits) on the XY bus are 1247us
+- Pulse width is 50us
+
+## Arduino
+- Runs with 16 MHz, 1 clock cycle is 62.5 ns.
+- So 1 clock cycle on the bus approx 20000 ticks
+- Pulse width is 800 ticks.
+- An interrupt call takes 4.
+- The UART uses 9600 bauds, meaning 960 Bytes/sec. 1 byte takes 10416 us.
+- 1 symbol on the bus takes 1247us.
+=> Need buffer.
+
+Usually there are 48 symbols (=48 bytes + newline) in 300 ms.
+
+
+# Idea
+
+1. Generate interrupts on low pulse and high pulse.
+
+If low pulse received:
+  - If state L: Error
+  - Start timer A.
+  - Set interrupt if A > 1300us.
+  - Set global state to L
+If high pulse received
+  - if state H: Error
+  - Read timer A
+  - Convert A to symbol (100 us => 0, 200 us => 1, ..., 800 us => 7)
+  - Put symbol into ring buffer
+  - Set state to H.
+If A interrupt:
+  - If global state is L: Set error flag.
+  - If global state is H: Transmission complete.
+
+Global loop:
+  - Send ring buffer to UART.
+
+# Stuff to find out
+When interrupts are disabled (e.g. during operations on the ring buffer that
+are required to be atomic) and an interrupt is configured on a rising edge.
+Does the interrupt happen if the edge is still high?
+
+# Important
+- In Setup, disable Interrupts. Otherwise stuff happens while not all
+  interrupts are set, leading to fuckups.

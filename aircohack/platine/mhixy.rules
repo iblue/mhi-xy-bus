@@ -1,0 +1,85 @@
+
+(rules PCB mhixy
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout on)
+    (autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 50)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 1180)
+    (layer_rule F.Cu
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 2.8)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.6)
+    )
+  )
+  (rule
+    (width 250.0)
+    (clear 200.2)
+    (clear 125.0 (type smd_to_turn_gap))
+    (clear 50.0 (type smd_smd))
+  )
+  (padstack "Via[0-1]_600:400_um"
+    (shape
+      (circle F.Cu 600.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 600.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_600:400_um" "Via[0-1]_600:400_um" default
+  )
+  (via 
+    "Via[0-1]_600:400_um-kicad_default" "Via[0-1]_600:400_um" "kicad_default"
+  )
+  (via_rule
+    default "Via[0-1]_600:400_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_600:400_um-kicad_default"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 250.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class "kicad_default"
+    Filtered "Net-(C1-Pad2)" /ChargePump/17V GND "Net-(C3-Pad1)" "Net-(C3-Pad2)" /ChargePump/32V /Generators/22V
+    /Generators/12V +5V "Net-(C10-Pad1)" "Net-(C11-Pad1)" RESET "Net-(C13-Pad2)" "Net-(C14-Pad2)" "Net-(C15-Pad2)"
+    "Net-(D2-Pad2)" "Net-(F1-Pad2)" Bus MISO SCK MOSI "Net-(J3-Pad2)" "Net-(J3-Pad3)"
+    "Net-(J3-Pad4)" "Net-(Q1-Pad1)" "Net-(Q1-Pad3)" "Net-(Q2-Pad2)" "Net-(Q3-Pad1)" "Net-(Q3-Pad3)" "Net-(Q4-Pad1)" "Net-(Q6-Pad1)"
+    "Net-(Q6-Pad3)" "Net-(Q7-Pad1)" /OutputDriver/BusOut "Net-(Q8-Pad1)" "Net-(Q8-Pad3)" "Net-(Q9-Pad1)" "Net-(R4-Pad2)" "Net-(R5-Pad1)"
+    "Net-(R6-Pad2)" "Net-(R7-Pad1)" /ChargePump/CLK "Net-(R17-Pad1)" /OutputDriver/TTLInLow /OutputDriver/TTLInHigh TX "Net-(R25-Pad2)"
+    RX "Net-(R26-Pad2)" "Net-(RV1-Pad2)" "Net-(RV2-Pad2)" /Controller/RXHI /Controller/RXLO "Net-(U4-Pad2)" "Net-(U4-Pad11)"
+    "Net-(U4-Pad12)" "Net-(U4-Pad13)" "Net-(U4-Pad19)" "Net-(U4-Pad22)" "Net-(U4-Pad23)" "Net-(U4-Pad24)" "Net-(U4-Pad25)" "Net-(U4-Pad26)"
+    "Net-(U4-Pad27)" "Net-(U4-Pad28)" "Net-(U6-Pad2)" "Net-(U6-Pad6)" "Net-(U6-Pad9)" "Net-(U6-Pad10)" "Net-(U6-Pad11)" "Net-(U6-Pad12)"
+    "Net-(U6-Pad13)" "Net-(U6-Pad14)" "Net-(U6-Pad17)" "Net-(U6-Pad19)" "Net-(U6-Pad22)" "Net-(U6-Pad23)" "Net-(U6-Pad27)" "Net-(U6-Pad28)"
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 250.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+)

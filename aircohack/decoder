@@ -1,0 +1,246 @@
+#!/usr/bin/env ruby
+require "byebug"
+unless ARGV[0]
+  puts "Usage: decoder <file>"
+  exit 1
+end
+
+# Levels
+HIGH = 4.4 # volts
+LOW =  3.2 # volts
+
+# Signal has to be this duration to be registered
+DURATION = 40e-6 # seconds (40 us)
+SILENCE = 20e-3  # seconds (20 ms)
+
+edges = []
+
+puts "### Pass 1 - Detecting flanks + packets ###"
+begin
+  lastlevel = :tristate
+  silence_since = 0.0
+  silence = false
+
+  File.open(ARGV[0]) do |f|
+    f.each_line do |line|
+      next if line[0] == " " # Skip header
+      time,voltage = line.split(", ").map(&:to_f)
+      #puts "#{time}:#{voltage}"
+
+      level = :tristate
+      if voltage > HIGH
+        level = :high
+      elsif voltage < LOW
+        level = :low
+      end
+
+      if level != lastlevel
+        puts "Edge deteced: #{lastlevel} -> #{level} @ #{time}"
+        edges << [lastlevel, level, time]
+
+        if level == :tristate
+          silence_since = time
+        end
+      end
+
+      if !silence && level == :tristate && time-silence_since > SILENCE
+        puts "Silence detected @ #{time}"
+        edges << [:silence, :silence, time]
+        silence = true
+      end
+
+      if level != :tristate
+        silence = false
+      end
+
+      lastlevel = level
+    end
+  end
+rescue Errno::ENOENT => e
+  puts "decoder: #{ARGV[0]}: No such file or directory"
+  exit 1
+end
+
+puts "\n### Pass 2 - Detecting needles ###"
+# detect flanks
+flank = nil
+starts = nil
+ends  = nil
+flanks = []
+edges.each do |from, to, time|
+  if from == :tristate && flank == nil
+    starts = time
+    flank = to
+  end
+
+  if from == flank && to == :tristate
+    ends = time
+  end
+
+  if from == :silence
+    puts "Detected packet end"
+    flanks << [:end, time]
+  end
+
+  if starts && ends && flank
+    if ends-starts >= DURATION
+      puts "Detected flank #{flank} @ #{time}, duration: #{ends-starts}."
+      flanks << [flank, ends]
+    end
+
+    starts = nil
+    ends = nil
+    flank = nil
+  end
+end
+
+# Times:
+# 103-104
+# 207
+# 311-312
+# 415-416
+# 519
+# 624
+# 727
+# 831-832
+puts "\n### Pass 3 - Parsing signal"
+def parse_time(timediff)
+  us = (timediff*1_000_000).to_i
+  puts "Timediff #{us} us"
+  result = if us > 90 && us < 120
+    0
+  elsif us > 180 && us < 220
+    1
+  elsif us > 280 && us < 340
+    2
+  elsif us > 390 && us < 440
+    3
+  elsif us > 500 && us < 540
+    4
+  elsif us > 600 && us < 650
+    5
+  elsif us > 700 && us < 750
+    6
+  elsif us > 800 && us < 850
+    7
+  else
+    raise "Timing not detected: #{us} us"
+  end
+
+  puts "Decoded as 0b#{result.to_s(2)}"
+  result
+end
+lastflank = nil
+lasttime  = nil
+signals = []
+packets = []
+flanks.each do |flank, time|
+  if lastflank == :low && flank == :high
+    diff = time - lasttime
+    signals << parse_time(diff)
+  end
+
+  if flank == :end
+    puts "--- Packet end @ #{time}"
+    packets << [time, signals]
+    signals = []
+  end
+
+  lastflank = flank
+  lasttime  = time
+end
+
+puts "\n### Pass 4 - Decoding binary"
+# FIXME: Probably bullshit.
+def decodebits(binary)
+  result = 0
+  binary.each do |sym|
+    result = sym + result*8
+  end
+
+  # Yeah... Sorry.
+  result.to_s(16).chars.each_slice(2).map(&:join).map{|x| x.to_i(16)}
+end
+
+packets.each do |time, binary|
+  puts "PACKET\n@#{"%02.06f" % time}\n"+binary.join(" ")+"\n"+binary.size.to_s+" symbol(s)"
+end
+
+# OUTPUT:
+# PACKET
+# @0.027917
+# 3 7 7 3 5 4 3
+# 7 symbol(s)
+# Meaning: Bullshit
+#
+# PACKET
+# @4.518892
+# 4 0 0 7 2 0 2 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 0 1 2
+# 48 symbol(s)
+# Meaning: Status (Remote => AC)
+#
+# PACKET
+# @5.187653
+# 0 0 0 7 0 0 3 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 3 1 2
+# 48 symbol(s)
+# Meaning: Turn on (Remote => AC)
+#
+# PACKET
+# @5.492117
+# 0 0 2 1 0 0 3 5 2 2 3 2 4 6 2 7 4 2 0 0 0 0 0 0 0 1 1 2 0 0 7 7 3 5 6 0 0 2 0 2 1 0 1 0 0 2 7 2
+# 48 symbol(s)
+# Meaning: ACK (AC => Remote)
+#
+# PACKET
+# @9.914484
+# 5 0 0 7 2 0 3 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 2 1 2
+# 48 symbol(s)
+# Meaning: Status (Remote => AC)
+#
+# PACKET
+# @10.515648
+# 0 0 0 7 0 0 2 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 2 1 2
+# 48 symbol(s)
+# Meaning: Turn off (Remote => AC)
+#
+# PACKET
+# @10.820873
+# 0 0 2 1 0 0 2 5 2 2 3 2 4 6 2 7 4 2 0 0 0 0 0 0 0 1 3 2 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 5 4 3
+# 48 symbol(s)
+# Meaning: ACK (AC => Remote)
+#
+# PACKET
+# @15.307135
+# 6 0 0 7 2 0 2 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 2 1 2
+# 48 symbol(s)
+# Meaning: Status (Remote => AC)
+#
+# PACKET
+# @20.090440
+# 0 0 0 7 0 0 2 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 2 1 2
+# 48 symbol(s)
+# Meaning: Turn on (Remote => AC)
+#
+# PACKET
+# @20.394880
+# 0 0 2 1 0 0 2 5 2 2 3 2 4 6 2 7 4 2 0 0 0 0 0 0 0 1 3 2 0 0 7 7 3 7 7 3 7 7 3 7 7 3 7 7 3 5 4 3
+# 48 symbol(s)
+# PACKET
+# Meaning: ACK (AC => Remote)
+#
+# @20.705185
+# 7 0 0 7 2 0 3 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 1 6 3 7 6 3 7 7 3 7 7 3 4 1 2
+# 48 symbol(s)
+# Meaning: Status (Remote => AC)
+#
+# PACKET
+# @25.287041
+# 0 0 0 7 0 0 2 5 2 2 3 2 4 6 2 7 7 3 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 7 7 3 7 7 3 7 7 3 7 7 3 2 1 2
+# 48 symbol(s)
+# Meaning: Turn off (Remote => AC)
+#
+# PACKET
+# @25.591754
+# 0 0 2 1 0 0 2 5 2 2 3 2 4 6 2 7 4 2 0 0 0 0 0 0 0 1 1 0 0 0 7 7 3 5 6 0 0 2 0 2 1 0 1 0 0 7 6 2
+# 48 symbol(s)
+# Meaning: ACK (AC => Remote)
